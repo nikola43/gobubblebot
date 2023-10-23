@@ -7,6 +7,7 @@ type Account struct {
 
 type TokenConfig struct {
 	Address  string
+	Pair     string
 	Group    string
 	Website  string
 	Telegram string

@@ -4,16 +4,18 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"math/big"
 	"reflect"
 	"strings"
-	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/fatih/color"
 	"github.com/mymmrac/telego"
 	tu "github.com/mymmrac/telego/telegoutil"
 	Pulsedoge "github.com/nikola43/gobubblebot/Pulsedoge"
+	"github.com/shopspring/decimal"
 )
 
 var stopChan = make(chan struct{})
@@ -95,6 +97,11 @@ func HandleButtonCallback(callback *telego.CallbackQuery, bot *telego.Bot) error
 		HandleAction(chatID, SetToken, bot)
 
 	case StartBot:
+		if state[chatID]["gID"] != nil {
+			SendMessage(chatID, "Bot already started", nil, bot)
+			return nil
+		}
+
 		done := make(chan bool)
 		goroutineId++
 		goroutines[goroutineId] = done
@@ -104,13 +111,19 @@ func HandleButtonCallback(callback *telego.CallbackQuery, bot *telego.Bot) error
 
 		contractAbi, _ := abi.JSON(strings.NewReader(string(Pulsedoge.PulsedogeABI)))
 		logs := make(chan types.Log)
-		sub := BuildContractEventSubscription(bscWeb3, "0xdeD70dEd50452497c841036F54AC81205a553C86", logs)
+		tokenAddress := common.HexToAddress("0x0080428794a79a40ae03cf6e6c1d56bd5467a4a2")
+		pair := "0x7cE52DC08B49e0Bc11252cD267d2614dfC616D9f"
+		sub := BuildContractEventSubscription(bscWeb3, tokenAddress.Hex(), logs)
 		fmt.Println(color.YellowString("  ----------------- Blockchain Events -----------------"))
-		fmt.Println(color.CyanString("\tListen token address: "), color.GreenString("0xdeD70dEd50452497c841036F54AC81205a553C86"))
+		fmt.Println(color.CyanString("\tListen token address: "), color.GreenString(tokenAddress.Hex()))
 
 		go func() {
 			defer wg.Done()
 			defer delete(goroutines, goroutineId)
+
+			isBuy := false
+			ethAmount := big.NewInt(0)
+			tokenAmount := big.NewInt(0)
 
 			for {
 				select {
@@ -137,11 +150,16 @@ func HandleButtonCallback(callback *telego.CallbackQuery, bot *telego.Bot) error
 					if err != nil {
 						log.Fatal(err)
 					}
+					userAddress, err := types.Sender(types.LatestSignerForChainID(tx.ChainId()), tx)
+					if err != nil {
+						log.Fatal(err)
+					}
+					fmt.Println("userAddress", userAddress)
+					//recipient, err := bscWeb3.HttpClient().TransactionReceipt(context.Background(), vLog.TxHash)
 
-					value := tx.Value()
-
-					fmt.Println("value")
-					fmt.Println(value)
+					//t := tx.To().Hex()
+					//fmt.Println("t")
+					//fmt.Println(t)
 
 					// check if event is Transfer
 					if event.Name == "Transfer" {
@@ -156,27 +174,81 @@ func HandleButtonCallback(callback *telego.CallbackQuery, bot *telego.Bot) error
 						fmt.Println("From: " + from.Hex())
 						fmt.Println("To: " + to.Hex())
 						fmt.Printf("Value: %v\n", value)
+						fmt.Println()
+
+						// Buy
+						ethAmount = tx.Value()
+						//if to.Hex() == common.HexToAddress(pair).Hex() {
+						//if to.Hex() == common.HexToAddress(pair).Hex() {
+						//	ethAmount = tx.Value()
+						//	fmt.Println("ethAmount")
+						//	fmt.Println(ethAmount)
+						//}
+
+						// Buy token
+						//if from.Hex() == common.HexToAddress(pair).Hex() &&  token_address == user_config['token_address'] and receiver_address == from_address {
+
+						//fmt.Println("from.Hex()", from.Hex())
+						//fmt.Println("common.HexToAddress(pair).Hex()", common.HexToAddress(pair).Hex())
+						//fmt.Println("to.Hex()", to.Hex())
+						//fmt.Println("userAddress.Hex()", userAddress.Hex())
+
+						if from.Hex() == common.HexToAddress(pair).Hex() &&
+							to.Hex() == userAddress.Hex() { //&& tokenAddress.Hex() == tx.To().Hex() {
+							tokenAmount = value
+						}
+
+						isBuy = from.Hex() == common.HexToAddress(pair).Hex()
 					}
+
+					// fmt.Println("BUY", isBuy)
+					// fmt.Println("ethAmount")
+					// fmt.Println(ethAmount)
+
+					//fmt.Println("tokenAmount")
+					//fmt.Println(tokenAmount)
+
+					if isBuy && ethAmount.Cmp(big.NewInt(0)) == 1 && tokenAmount.Cmp(big.NewInt(0)) == 1 {
+						fmt.Println("BUY")
+						fmt.Println("ethAmount")
+						fmt.Println(ethAmount)
+
+						fmt.Println("tokenAmount")
+						fmt.Println(tokenAmount)
+
+						msg := "ethAmount " + ToDecimal(ethAmount, 18).String() + "\n"
+						msg += "tokenAmount " + ToDecimal(tokenAmount, 18).String() + "\n"
+						SendMessage(chatID, msg, nil, bot)
+
+						isBuy = false
+						ethAmount = big.NewInt(0)
+						tokenAmount = big.NewInt(0)
+					}
+
 				default:
 
 					// Your goroutine's work here
-					fmt.Printf("Goroutine %d is running\n", goroutineId)
-					time.Sleep(time.Second)
+					//fmt.Printf("Goroutine %d is running\n", goroutineId)
+					//time.Sleep(time.Second)
 
 				}
 			}
 		}()
 
 	case StopBot:
-		id := state[chatID]["gID"].(int)
-		fmt.Println("id", id)
+		if state[chatID]["gID"] == nil {
+			SendMessage(chatID, "Bot not started", nil, bot)
+			return nil
+		}
 
+		id := state[chatID]["gID"].(int)
 		if done, exists := goroutines[id]; exists {
 			close(done)
 		}
 		wg.Wait()
-
-		//ActionStopBot(chatID, id, bot)
+		state[chatID]["gID"] = nil
+		goroutineId--
+		SendMessage(chatID, "Bot stopped", nil, bot)
 	}
 
 	return nil
@@ -363,4 +435,20 @@ func HandleConfirm(backRoute, proceedRoute string, chatID int64, msg string, bot
 	state[chatID]["BotMessageID"] = res.MessageID
 	_ = res
 
+}
+
+func ToDecimal(ivalue interface{}, decimals int) decimal.Decimal {
+	value := new(big.Int)
+	switch v := ivalue.(type) {
+	case string:
+		value.SetString(v, 10)
+	case *big.Int:
+		value = v
+	}
+
+	mul := decimal.NewFromFloat(float64(10)).Pow(decimal.NewFromFloat(float64(decimals)))
+	num, _ := decimal.NewFromString(value.String())
+	result := num.Div(mul)
+
+	return result
 }
