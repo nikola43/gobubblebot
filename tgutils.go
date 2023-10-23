@@ -9,7 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/mymmrac/telego"
 	tu "github.com/mymmrac/telego/telegoutil"
-	Pulsedoge "github.com/nikola43/listener/Pulsedoge"
+	Pulsedoge "github.com/nikola43/gobubblebot/Pulsedoge"
 )
 
 func HandleInput(inputMode string, update telego.Update, bot *telego.Bot) error {
