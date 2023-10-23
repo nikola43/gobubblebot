@@ -1,13 +1,19 @@
 package main
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"fmt"
 	"log"
+	"math/big"
 
+	"github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/nikola43/web3golanghelper/web3helper"
 	"golang.org/x/crypto/sha3"
 )
 
@@ -77,4 +83,34 @@ func GenerateWallet() Account {
 	}
 
 	return account
+}
+
+func BuildContractEventSubscription(web3GolangHelper *web3helper.Web3GolangHelper, contractAddress string, logs chan types.Log) ethereum.Subscription {
+	query := ethereum.FilterQuery{
+		Addresses: []common.Address{common.HexToAddress(contractAddress)},
+	}
+
+	sub, err := web3GolangHelper.WebSocketClient().SubscribeFilterLogs(context.Background(), query, logs)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("reinitialize Subscribed to contract events")
+	return sub
+}
+
+func ExtractEventLogData(vLog types.Log, contractAbi abi.ABI, eventName string) (common.Address, common.Address, *big.Int, error) {
+	// get the from and to address
+	from := common.HexToAddress(vLog.Topics[1].Hex())
+	to := common.HexToAddress(vLog.Topics[2].Hex())
+
+	// get the value
+	outputDataMap := make(map[string]interface{})
+	err := contractAbi.UnpackIntoMap(outputDataMap, eventName, vLog.Data)
+	if err != nil {
+		panic(err)
+	}
+
+	v := outputDataMap["value"].(*big.Int)
+
+	return from, to, v, nil
 }

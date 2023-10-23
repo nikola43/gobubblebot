@@ -1,16 +1,22 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"log"
 	"reflect"
 	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/fatih/color"
 	"github.com/mymmrac/telego"
 	tu "github.com/mymmrac/telego/telegoutil"
 	Pulsedoge "github.com/nikola43/gobubblebot/Pulsedoge"
 )
+
+var stopChan = make(chan struct{})
 
 func HandleInput(inputMode string, update telego.Update, bot *telego.Bot) error {
 	chatID := update.Message.Chat.ID
@@ -93,6 +99,15 @@ func HandleButtonCallback(callback *telego.CallbackQuery, bot *telego.Bot) error
 		goroutineId++
 		goroutines[goroutineId] = done
 		wg.Add(1)
+		SendMessage(chatID, "Buy init", nil, bot)
+		state[chatID]["gID"] = goroutineId
+
+		contractAbi, _ := abi.JSON(strings.NewReader(string(Pulsedoge.PulsedogeABI)))
+		logs := make(chan types.Log)
+		sub := BuildContractEventSubscription(bscWeb3, "0xdeD70dEd50452497c841036F54AC81205a553C86", logs)
+		fmt.Println(color.YellowString("  ----------------- Blockchain Events -----------------"))
+		fmt.Println(color.CyanString("\tListen token address: "), color.GreenString("0xdeD70dEd50452497c841036F54AC81205a553C86"))
+
 		go func() {
 			defer wg.Done()
 			defer delete(goroutines, goroutineId)
@@ -100,25 +115,68 @@ func HandleButtonCallback(callback *telego.CallbackQuery, bot *telego.Bot) error
 			for {
 				select {
 				case <-done:
-					fmt.Printf("Goroutine %d exiting\n", goroutineId)
+					fmt.Printf("done Goroutine %d exiting\n", goroutineId)
 					return
-				default:
+				case <-stopChan:
+					fmt.Printf("stopChan Goroutine %d exiting\n", goroutineId)
+					return // Exit the goroutine when stopChan is closed
+				case err := <-sub.Err():
+					fmt.Println("error socket", err)
+					//bscWeb3 = web3helper.NewWeb3GolangHelper(BSC_RPC_URL, BSC_WS_URL)
+					//sub = BuildContractEventSubscription(bscWeb3, BSC_TOKEN_ADDRESS, logs)
 
-					contractAbi, _ := abi.JSON(strings.NewReader(string(Pulsedoge.PulsedogeABI)))
+				case vLog := <-logs:
+					event, err := contractAbi.EventByID(vLog.Topics[0])
+					if err != nil {
+						panic(err)
+					}
+					fmt.Printf("Event Name: %s\n", event.Name)
+
+					tx, pending, err := bscWeb3.HttpClient().TransactionByHash(context.Background(), vLog.TxHash)
+					_ = pending
+					if err != nil {
+						log.Fatal(err)
+					}
+
+					value := tx.Value()
+
+					fmt.Println("value")
+					fmt.Println(value)
+
+					// check if event is Transfer
+					if event.Name == "Transfer" {
+
+						// parse event data
+						from, to, value, err := ExtractEventLogData(vLog, contractAbi, event.Name)
+						if err != nil {
+							panic(err)
+						}
+
+						fmt.Println("vLog.TxHash: " + vLog.TxHash.Hex())
+						fmt.Println("From: " + from.Hex())
+						fmt.Println("To: " + to.Hex())
+						fmt.Printf("Value: %v\n", value)
+					}
+				default:
 
 					// Your goroutine's work here
 					fmt.Printf("Goroutine %d is running\n", goroutineId)
 					time.Sleep(time.Second)
+
 				}
 			}
 		}()
 
-		SendMessage(chatID, "Buy init", nil, bot)
-		state[chatID]["gID"] = goroutineId
-
 	case StopBot:
 		id := state[chatID]["gID"].(int)
-		ActionStopBot(chatID, id, bot)
+		fmt.Println("id", id)
+
+		if done, exists := goroutines[id]; exists {
+			close(done)
+		}
+		wg.Wait()
+
+		//ActionStopBot(chatID, id, bot)
 	}
 
 	return nil
