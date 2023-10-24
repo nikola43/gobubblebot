@@ -18,12 +18,14 @@ func HandleAction(chatID int64, action string, bot *telego.Bot) error {
 func ActionStart(chatID int64, bot *telego.Bot) error {
 	fmt.Println("start")
 
-	_, err := SendMessage(chatID, "welcome", nil, bot)
-	if err != nil {
-		return err
-	}
+	/*
+		_, err := SendMessage(chatID, "welcome", nil, bot)
+		if err != nil {
+			return err
+		}
+	*/
 
-	HandleActionWithKeyboard(chatID, ShowMenu, "message", bot)
+	HandleActionWithKeyboard(chatID, ShowMenu, "Configure your bot", bot)
 
 	return nil
 }
@@ -34,6 +36,7 @@ func HandleActionWithKeyboard(chatID int64, action string, message string, bot *
 	if err != nil {
 		return err
 	}
+	//state[chatID]["InputMode"] = action
 	return nil
 }
 

@@ -24,20 +24,69 @@ func HandleInput(inputMode string, update telego.Update, bot *telego.Bot) error 
 	chatID := update.Message.Chat.ID
 	msgText := update.Message.Text
 
+	fmt.Println(inputMode)
+
 	switch inputMode {
 
-	// --------------------- AddToken ---------------------
+	// --------------------- SetToken ---------------------
 	case SetToken:
 		if len(msgText) != 42 {
 			txt := "Invalid token address, please try again."
 			SendMessage(chatID, txt, nil, bot)
 			return nil
 		}
-
 		tokenConfig := TokenConfig{
 			Address: msgText,
 		}
+		state[chatID]["TokenConfig"] = tokenConfig
 
+	// --------------------- SetGroup ---------------------
+	case SetGroup:
+		/*
+			if len(msgText) != 42 {
+				txt := "Invalid token address, please try again."
+				SendMessage(chatID, txt, nil, bot)
+				return nil
+			}
+		*/
+		tokenConfig := state[chatID]["TokenConfig"].(TokenConfig)
+		tokenConfig.Group = msgText
+		state[chatID]["TokenConfig"] = tokenConfig
+	// --------------------- SetTelegram ---------------------
+	case SetTelegram:
+		/*
+			if len(msgText) != 42 {
+				txt := "Invalid token address, please try again."
+				SendMessage(chatID, txt, nil, bot)
+				return nil
+			}
+		*/
+		tokenConfig := state[chatID]["TokenConfig"].(TokenConfig)
+		tokenConfig.Telegram = msgText
+		state[chatID]["TokenConfig"] = tokenConfig
+	// --------------------- SetWebsite ---------------------
+	case SetWebsite:
+		/*
+			if len(msgText) != 42 {
+				txt := "Invalid token address, please try again."
+				SendMessage(chatID, txt, nil, bot)
+				return nil
+			}
+		*/
+		tokenConfig := state[chatID]["TokenConfig"].(TokenConfig)
+		tokenConfig.Website = msgText
+		state[chatID]["TokenConfig"] = tokenConfig
+	// --------------------- SetTwitter ---------------------
+	case SetTwitter:
+		/*
+			if len(msgText) != 42 {
+				txt := "Invalid token address, please try again."
+				SendMessage(chatID, txt, nil, bot)
+				return nil
+			}
+		*/
+		tokenConfig := state[chatID]["TokenConfig"].(TokenConfig)
+		tokenConfig.Twitter = msgText
 		state[chatID]["TokenConfig"] = tokenConfig
 	}
 
@@ -46,13 +95,21 @@ func HandleInput(inputMode string, update telego.Update, bot *telego.Bot) error 
 		return err
 	}
 
-	tokenConfig := reflect.ValueOf(state[chatID]["TokenConfig"])
-	message := "Bot config" + "\n"
-	message += "Address: " + tokenConfig.FieldByName("Address").String() + "\n"
-	message += "Group: " + tokenConfig.FieldByName("Group").String() + "\n"
-	message += "Telegram: " + tokenConfig.FieldByName("Telegram").String() + "\n"
-	HandleActionWithKeyboard(chatID, ShowMenu, message, bot)
+	msg := BuildConfigMessage(state[chatID]["TokenConfig"])
+	HandleActionWithKeyboard(chatID, ShowMenu, msg, bot)
 	return nil
+}
+
+func BuildConfigMessage(config interface{}) string {
+	tokenConfig := reflect.ValueOf(config)
+	msg := "⚙️ Bot config ⚙️" + "\n\n"
+	msg += "📄 Address: " + tokenConfig.FieldByName("Address").String() + "\n\n"
+	msg += "🚻 Group: " + tokenConfig.FieldByName("Group").String() + "\n\n"
+	msg += " ➤ Telegram: " + tokenConfig.FieldByName("Telegram").String() + "\n\n"
+	msg += "🌐 Website: " + tokenConfig.FieldByName("Website").String() + "\n\n"
+	msg += " 𝕏 Twitter: " + tokenConfig.FieldByName("Twitter").String() + "\n\n"
+
+	return msg
 }
 
 func HandleButtonCallback(callback *telego.CallbackQuery, bot *telego.Bot) error {
@@ -85,16 +142,20 @@ func HandleButtonCallback(callback *telego.CallbackQuery, bot *telego.Bot) error
 
 	switch callback.Data {
 	case ShowMenu:
-		tokenConfig := reflect.ValueOf(state[chatID]["TokenConfig"])
-		message := "Bot config" + "\n"
-		message += "Address: " + tokenConfig.FieldByName("Address").String() + "\n"
-		message += "Group: " + tokenConfig.FieldByName("Group").String() + "\n"
-		message += "Telegram: " + tokenConfig.FieldByName("Telegram").String() + "\n"
-		HandleActionWithKeyboard(chatID, ShowMenu, message, bot)
+		msg := BuildConfigMessage(state[chatID]["TokenConfig"])
+		HandleActionWithKeyboard(chatID, ShowMenu, msg, bot)
 	case Disconnect:
 		HandleActionWithKeyboard(chatID, Start, "message", bot)
 	case SetToken:
 		HandleAction(chatID, SetToken, bot)
+	case SetGroup:
+		HandleAction(chatID, SetGroup, bot)
+	case SetTelegram:
+		HandleAction(chatID, SetTelegram, bot)
+	case SetWebsite:
+		HandleAction(chatID, SetWebsite, bot)
+	case SetTwitter:
+		HandleAction(chatID, SetTwitter, bot)
 
 	case StartBot:
 		if state[chatID]["gID"] != nil {
@@ -308,38 +369,6 @@ func showConfig() {
 func showPage(page string) {
 
 }
-
-/*
-/*
-func HandleMessage(update telego.Update, bot *telego.Bot) error {
-
-	chatID := update.Message.Chat.ID
-	msgText := update.Message.Text
-
-	if state[chatID] == nil {
-		state[chatID] = make(map[string]interface{})
-	}
-
-	inputMode, ok := state[chatID]["InputMode"].(string)
-	botMessageID, ok = state[chatID]["BotMessageID"].(int)
-
-
-	switch msgText {
-	case Start:
-		_, err := SendMessage(chatID, "welcome", nil, bot)
-		if err != nil {
-			return err
-		}
-		ActionStart(chatID, bot)
-	}
-
-	HandleInput(inputMode, update, bot)
-	//DeleteMessage(chatID, botMessageID, bot)
-
-	return nil
-}
-
-*/
 
 func SendMessage(chatID int64, msg string, replyMarkup telego.ReplyMarkup, bot *telego.Bot) (*telego.Message, error) {
 	var message *telego.SendMessageParams

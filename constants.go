@@ -7,15 +7,18 @@ import (
 
 // actions
 const (
-	Back         = "back"
-	Proceed      = "proceed"
-	Start        = "start"
-	ShowMenu     = "show_menu"
-	Disconnect   = "disconnect"
+	Back       = "back"
+	Proceed    = "proceed"
+	Start      = "start"
+	ShowMenu   = "show_menu"
+	Disconnect = "disconnect"
+
+	ETH = "eth"
+	BSC = "bsc"
 
 	SetToken    = "set_token"
 	SetGroup    = "set_group"
-	SetTelegram = "set_telegra"
+	SetTelegram = "set_telegram"
 	SetWebsite  = "set_website"
 	SetTwitter  = "set_twitter"
 	StartBot    = "startbot"
@@ -24,11 +27,11 @@ const (
 
 var INPUT_CAPTIONS = map[string]string{
 	"Welcome":   "Welcome to app",
-	SetToken:    "Set token",
-	SetGroup:    "Set group",
-	SetWebsite:  "Set website",
-	SetTelegram: "Set telegram",
-	SetTwitter:  "Set twitter",
+	SetToken:    "Set token address",
+	SetGroup:    "Set group link",
+	SetWebsite:  "Set website link",
+	SetTelegram: "Set telegram link",
+	SetTwitter:  "Set twitter link",
 }
 
 var MAIN_MENU_KEYBOARD = tu.InlineKeyboard(
@@ -42,19 +45,26 @@ var MAIN_MENU_KEYBOARD = tu.InlineKeyboard(
 	),
 )
 
+/*
+	tu.InlineKeyboardRow( // Row 2
+		tu.InlineKeyboardButton("🟢 ETH").WithCallbackData(SetToken),
+		tu.InlineKeyboardButton("⚪ BSC").WithCallbackData(SetGroup),
+	),
+*/
+
 var CONFIG_KEYBOARD = tu.InlineKeyboard(
 	tu.InlineKeyboardRow( // Row 2
-		tu.InlineKeyboardButton("Set Token").WithCallbackData(SetToken),
-		tu.InlineKeyboardButton("Set Group").WithCallbackData(SetGroup),
+		tu.InlineKeyboardButton("📄 Token").WithCallbackData(SetToken),
+		tu.InlineKeyboardButton("🚻 Group").WithCallbackData(SetGroup),
 	),
 	tu.InlineKeyboardRow( // Row 2
-		tu.InlineKeyboardButton("Set Telegram").WithCallbackData(SetTelegram),
-		tu.InlineKeyboardButton("Set Website").WithCallbackData(SetWebsite),
-		tu.InlineKeyboardButton("Set Twitter").WithCallbackData(SetTwitter),
+		tu.InlineKeyboardButton("➤ Telegram").WithCallbackData(SetTelegram),
+		tu.InlineKeyboardButton("🌐 Website").WithCallbackData(SetWebsite),
+		tu.InlineKeyboardButton("𝕏 Twitter").WithCallbackData(SetTwitter),
 	),
 	tu.InlineKeyboardRow( // Row 2
-		tu.InlineKeyboardButton("Start").WithCallbackData(StartBot),
-		tu.InlineKeyboardButton("Stop").WithCallbackData(StopBot),
+		tu.InlineKeyboardButton("✅ Start").WithCallbackData(StartBot),
+		tu.InlineKeyboardButton("❌ Stop").WithCallbackData(StopBot),
 	),
 )
 
