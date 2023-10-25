@@ -16,7 +16,7 @@ import (
 )
 
 func HandleAction(chatID int64, action string, bot *telego.Bot) error {
-	_, err := SendMessage(chatID, INPUT_CAPTIONS[action], nil, bot)
+	_, err := SendMessage(chatID, INPUT_CAPTIONS[action], nil, bot, false)
 	if err != nil {
 		return err
 	}
@@ -41,7 +41,7 @@ func ActionStart(chatID int64, bot *telego.Bot) error {
 
 func HandleActionWithKeyboard(chatID int64, action string, message string, bot *telego.Bot) error {
 	keyboard := KEYBOARDS[action]
-	_, err := SendMessage(chatID, message, keyboard, bot)
+	_, err := SendMessage(chatID, message, keyboard, bot, false)
 	if err != nil {
 		return err
 	}
@@ -71,7 +71,7 @@ func ActionBack(chatID int64, bot *telego.Bot) error {
 
 func ActionStartBot(chatID int64, bot *telego.Bot) error {
 	if state[chatID]["gID"] != nil {
-		SendMessage(chatID, "Bot already started", nil, bot)
+		SendMessage(chatID, "Bot already started", nil, bot, false)
 		return nil
 	}
 
@@ -95,7 +95,7 @@ func ActionStartBot(chatID int64, bot *telego.Bot) error {
 	goroutineId++
 	goroutines[goroutineId] = done
 	wg.Add(1)
-	SendMessage(chatID, "Buy init", nil, bot)
+	SendMessage(chatID, "Bot started", nil, bot, false)
 	state[chatID]["gID"] = goroutineId
 
 	contractAbi, _ := abi.JSON(strings.NewReader(string(Pulsedoge.PulsedogeABI)))
@@ -220,7 +220,7 @@ func ActionStartBot(chatID int64, bot *telego.Bot) error {
 					msg = escapeMarkdown(msg)
 					fmt.Println(msg)
 
-					_, err := SendMessage(chatID, msg, nil, bot)
+					_, err := SendMessage(chatID, msg, nil, bot, true)
 					fmt.Println(err)
 					fmt.Println(err)
 
@@ -259,7 +259,7 @@ func escapeMarkdown(message string) string {
 func ActionStopBot(chatID int64, bot *telego.Bot) error {
 
 	if state[chatID]["gID"] == nil {
-		SendMessage(chatID, "Bot not started", nil, bot)
+		SendMessage(chatID, "Bot not started", nil, bot, false)
 		return nil
 	}
 
@@ -270,6 +270,6 @@ func ActionStopBot(chatID int64, bot *telego.Bot) error {
 	wg.Wait()
 	state[chatID]["gID"] = nil
 	goroutineId--
-	SendMessage(chatID, "Bot stopped", nil, bot)
+	SendMessage(chatID, "Bot stopped", nil, bot, false)
 	return nil
 }

@@ -25,7 +25,7 @@ func HandleInput(inputMode string, update telego.Update, bot *telego.Bot) error 
 	case SetToken:
 		if len(msgText) != 42 {
 			txt := "Invalid token address, please try again."
-			SendMessage(chatID, txt, nil, bot)
+			SendMessage(chatID, txt, nil, bot, false)
 			return nil
 		}
 
@@ -104,6 +104,7 @@ func HandleInput(inputMode string, update telego.Update, bot *telego.Bot) error 
 	}
 
 	msg := BuildConfigMessage(state[chatID]["TokenConfig"])
+	fmt.Println("msg")
 	fmt.Println(msg)
 	HandleActionWithKeyboard(chatID, ShowMenu, msg, bot)
 	return nil
@@ -258,7 +259,7 @@ func HandleMessage(update telego.Update, bot *telego.Bot) error {
 
 	switch msgText {
 	case "/start":
-		_, err := SendMessage(chatID, "welcome", nil, bot)
+		_, err := SendMessage(chatID, "welcome", nil, bot, false)
 		if err != nil {
 			return err
 		}
@@ -287,19 +288,27 @@ func showPage(page string) {
 
 }
 
-func SendMessage(chatID int64, msg string, replyMarkup telego.ReplyMarkup, bot *telego.Bot) (*telego.Message, error) {
+func SendMessage(chatID int64, msg string, replyMarkup telego.ReplyMarkup, bot *telego.Bot, withMarkdown bool) (*telego.Message, error) {
 	var message *telego.SendMessageParams
 
 	if replyMarkup != nil {
 		message = tu.Message(
 			tu.ID(chatID),
 			msg,
-		).WithReplyMarkup(replyMarkup).WithParseMode("MarkdownV2").WithDisableWebPagePreview()
+		).WithReplyMarkup(replyMarkup).WithDisableWebPagePreview()
+		if withMarkdown {
+			message.WithParseMode("MarkdownV2")
+		}
 	} else {
 		message = tu.Message(
 			tu.ID(chatID),
 			msg,
-		).WithParseMode("MarkdownV2").WithDisableWebPagePreview()
+		).WithDisableWebPagePreview()
+
+		if withMarkdown {
+			message.WithParseMode("MarkdownV2")
+		}
+
 	}
 	// Sending message
 	res, err := bot.SendMessage(message)
