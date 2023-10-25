@@ -1,9 +1,12 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"math/big"
+	"os"
 	"reflect"
+	"strconv"
 	"strings"
 
 	"github.com/mymmrac/telego"
@@ -39,13 +42,37 @@ func HandleInput(inputMode string, update telego.Update, bot *telego.Bot) error 
 			}
 		*/
 
-		//fmt.Println(tokenInfo)
-		fmt.Println("pair", pair.PairAddress)
-		tokenConfig := state[chatID]["TokenConfig"].(TokenConfig)
-		tokenConfig.Address = msgText
-		tokenConfig.Pair = *pair.PairAddress
-		tokenConfig.Symbol = *pair.BaseToken.Symbol
-		state[chatID]["TokenConfig"] = tokenConfig
+		/*
+			//fmt.Println(tokenInfo)
+			fmt.Println("pair", pair.PairAddress)
+			tokenConfig := state[chatID]["TokenConfig"].(TokenConfig)
+			tokenConfig.Address = msgText
+			tokenConfig.Pair = *pair.PairAddress
+			tokenConfig.Symbol = *pair.BaseToken.Symbol
+		*/
+
+		// get user id and config file
+		userID := strconv.Itoa(int(update.Message.From.ID))
+		userConfigFile := "data/" + userID + ".json"
+		var userConfig UserConfig
+		file, _ := os.ReadFile(userConfigFile)
+		_ = json.Unmarshal([]byte(file), &userConfig)
+		userConfig.Token.Address = msgText
+		userConfig.Token.Pair = *pair.PairAddress
+		userConfig.Token.Symbol = *pair.BaseToken.Symbol
+
+		b, err := json.Marshal(userConfig)
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println(string(b))
+
+		err = os.WriteFile("data/"+userID+".json", b, 0644)
+		if err != nil {
+			panic(err)
+		}
+
+		state[chatID]["TokenConfig"] = userConfig.Token
 
 	// --------------------- SetGroup ---------------------
 	case SetGroup:
@@ -104,8 +131,6 @@ func HandleInput(inputMode string, update telego.Update, bot *telego.Bot) error 
 	}
 
 	msg := BuildConfigMessage(state[chatID]["TokenConfig"])
-	fmt.Println("msg")
-	fmt.Println(msg)
 	HandleActionWithKeyboard(chatID, ShowMenu, msg, bot)
 	return nil
 }
@@ -163,7 +188,9 @@ func BuildBubbleMessage(tokenConfig TokenConfig, userAddress, tx string, ethAmou
 func BuildConfigMessage(config interface{}) string {
 	tokenConfig := reflect.ValueOf(config)
 	msg := "⚙️ Bot config ⚙️" + "\n\n"
+	msg += "📄 Symbol: " + tokenConfig.FieldByName("Symbol").String() + "\n\n"
 	msg += "📄 Address: " + tokenConfig.FieldByName("Address").String() + "\n\n"
+	msg += "📄 Pair: " + tokenConfig.FieldByName("Pair").String() + "\n\n"
 	msg += "🚻 Group: " + tokenConfig.FieldByName("Group").String() + "\n\n"
 	msg += " ➤ Telegram: " + tokenConfig.FieldByName("Telegram").String() + "\n\n"
 	msg += "🌐 Website: " + tokenConfig.FieldByName("Website").String() + "\n\n"
@@ -259,17 +286,53 @@ func HandleMessage(update telego.Update, bot *telego.Bot) error {
 
 	switch msgText {
 	case "/start":
+
 		_, err := SendMessage(chatID, "welcome", nil, bot, false)
 		if err != nil {
 			return err
 		}
 
-		if state[chatID]["TokenConfig"] == nil {
-			tokenConfig := TokenConfig{}
-			state[chatID]["TokenConfig"] = tokenConfig
+		// get user id
+		userID := strconv.Itoa(int(update.Message.From.ID))
+
+		// check if user config file exists
+		_, err = os.Stat("data/" + userID + ".json")
+
+		// if not exist create it, and save
+		if os.IsNotExist(err) {
+			userConfig := &UserConfig{
+				Id:    &userID,
+				Token: *new(TokenConfig),
+			}
+
+			b, err := json.Marshal(userConfig)
+			if err != nil {
+				panic(err)
+			}
+			fmt.Println(string(b))
+
+			err = os.WriteFile("data/"+userID+".json", b, 0644)
+			if err != nil {
+				panic(err)
+			}
+
+			if state[chatID]["TokenConfig"] == nil {
+				tokenConfig := TokenConfig{}
+				state[chatID]["TokenConfig"] = tokenConfig
+			}
+
+			ActionStart(chatID, bot)
+		} else {
+			var data UserConfig
+			file, _ := os.ReadFile("data/" + userID + ".json")
+			_ = json.Unmarshal([]byte(file), &data)
+			fmt.Println(data)
+			state[chatID]["TokenConfig"] = data.Token
+
+			msg := BuildConfigMessage(state[chatID]["TokenConfig"])
+			HandleActionWithKeyboard(chatID, ShowMenu, msg, bot)
 		}
 
-		ActionStart(chatID, bot)
 	}
 
 	if inputMode != "" {
@@ -407,3 +470,16 @@ func ToDecimal(ivalue interface{}, decimals int) decimal.Decimal {
 
 	return result
 }
+
+/*
+func BuildConfigMessage(config TokenConfig) string {
+	msg := "⚙️ Bot config ⚙️" + "\n\n"
+	msg += "📄 Address: " + config.Address + "\n\n"
+	msg += "🚻 Group: " + config.Group + "\n\n"
+	msg += " ➤ Telegram: " + config.Telegram + "\n\n"
+	msg += "🌐 Website: " + config.Website + "\n\n"
+	msg += " 𝕏 Twitter: " + config.Twitter + "\n\n"
+
+	return msg
+}
+*/

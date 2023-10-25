@@ -1,10 +1,15 @@
 package main
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"math/big"
 
-type Account struct {
-	Address    string
-	PrivateKey string
+	"github.com/ethereum/go-ethereum/common"
+)
+
+type UserConfig struct {
+	Id    *string
+	Token TokenConfig
 }
 
 type TokenConfig struct {
@@ -22,6 +27,12 @@ type HoldersTaxes struct {
 	Holders *string
 	Buy     string
 	Sell    string
+}
+
+type TransferEventData struct {
+	From   common.Address
+	To     common.Address
+	Amount *big.Int
 }
 
 func UnmarshalTokenInfoDexscreener(data []byte) (TokenInfoDexscreener, error) {
@@ -50,7 +61,7 @@ type Pair struct {
 	PriceNative   *string       `json:"priceNative,omitempty"`
 	PriceUsd      *string       `json:"priceUsd,omitempty"`
 	Volume        *VolumeChange `json:"volume,omitempty"`
-	Fdv           *float64        `json:"fdv,omitempty"`
+	Fdv           *float64      `json:"fdv,omitempty"`
 	PairCreatedAt *int64        `json:"pairCreatedAt,omitempty"`
 }
 

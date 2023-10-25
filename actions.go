@@ -102,7 +102,7 @@ func ActionStartBot(chatID int64, bot *telego.Bot) error {
 	logs := make(chan types.Log)
 	tokenAddress := tokenConfig.Address
 	pair := tokenConfig.Pair
-	sub := BuildContractEventSubscription(bscWeb3, tokenAddress, logs)
+	sub, _ := BuildContractEventSubscription(bscWeb3, tokenAddress, logs)
 	fmt.Println(color.YellowString("  ----------------- Blockchain Events -----------------"))
 	fmt.Println(color.CyanString("\tListen token address: "), color.GreenString(tokenAddress))
 
@@ -156,15 +156,15 @@ func ActionStartBot(chatID int64, bot *telego.Bot) error {
 					fmt.Println("userAddress", userAddress)
 
 					// parse event data
-					from, to, value, err := ExtractEventLogData(vLog, contractAbi, event.Name)
+					transferEventData, err := ExtractEventLogData(vLog, contractAbi, event.Name)
 					if err != nil {
 						panic(err)
 					}
 
 					fmt.Println("vLog.TxHash: " + vLog.TxHash.Hex())
-					fmt.Println("From: " + from.Hex())
-					fmt.Println("To: " + to.Hex())
-					fmt.Printf("Value: %v\n", value)
+					fmt.Println("From: " + transferEventData.From.Hex())
+					fmt.Println("To: " + transferEventData.To.Hex())
+					fmt.Printf("Value: %v\n", transferEventData.Amount)
 					fmt.Println()
 
 					// Buy
@@ -184,13 +184,13 @@ func ActionStartBot(chatID int64, bot *telego.Bot) error {
 					//fmt.Println("to.Hex()", to.Hex())
 					//fmt.Println("userAddress.Hex()", userAddress.Hex())
 
-					if from.Hex() == common.HexToAddress(pair).Hex() &&
-						to.Hex() == userAddress.Hex() { //&& tokenAddress.Hex() == tx.To().Hex() {
-						tokenAmount = value
+					if transferEventData.From.Hex() == common.HexToAddress(pair).Hex() &&
+						transferEventData.To.Hex() == userAddress.Hex() { //&& tokenAddress.Hex() == tx.To().Hex() {
+						tokenAmount = transferEventData.Amount
 						ethAmount = tx.Value()
 					}
 
-					isBuy = from.Hex() == common.HexToAddress(pair).Hex()
+					isBuy = transferEventData.From.Hex() == common.HexToAddress(pair).Hex()
 				}
 
 				// fmt.Println("BUY", isBuy)

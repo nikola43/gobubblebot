@@ -38,6 +38,7 @@ require (
 	github.com/mattn/go-isatty v0.0.17 // indirect
 	github.com/mdp/qrterminal v1.0.1 // indirect
 	github.com/mmcloughlin/addchain v0.4.0 // indirect
+	github.com/samber/lo v1.38.1 // indirect
 	github.com/savsgio/gotils v0.0.0-20230208104028-c358bd845dee // indirect
 	github.com/shirou/gopsutil v3.21.11+incompatible // indirect
 	github.com/shopspring/decimal v1.3.1 // indirect

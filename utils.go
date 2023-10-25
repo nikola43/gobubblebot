@@ -164,3 +164,27 @@ func GetTokenHoldersAndTaxes(tokenAddress string) (HoldersTaxes, error) {
 
 	return holdersTaxes, nil
 }
+
+/*
+func UpdateUserConfigFile(userID string) {
+	userConfigFile := "data/" + userID + ".json"
+	var userConfig UserConfig
+	file, _ := os.ReadFile(userConfigFile)
+	_ = json.Unmarshal([]byte(file), &userConfig)
+	userConfig.Token.Address = msgText
+	userConfig.Token.Pair = *pair.PairAddress
+	userConfig.Token.Symbol = *pair.BaseToken.Symbol
+
+	b, err := json.Marshal(userConfig)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(string(b))
+
+	err = os.WriteFile("data/"+userID+".json", b, 0644)
+	if err != nil {
+		panic(err)
+	}
+
+}
+*/
