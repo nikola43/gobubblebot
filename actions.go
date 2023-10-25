@@ -212,7 +212,8 @@ func ActionStartBot(chatID int64, bot *telego.Bot) error {
 					//msg += "tokenAmount " + ToDecimal(tokenAmount, 18).String() + "\n"
 
 					tokenInfo, _ := GetTokenInfoDex(tokenConfig.Address)
-					mc := fmt.Sprintf("%d", tokenInfo.Fdv)
+					println("*tokenInfo.Fdv", *tokenInfo.Fdv)
+					mc := fmt.Sprintf("%f", *tokenInfo.Fdv)
 					volume24 := fmt.Sprintf("%f", *tokenInfo.Volume.H24)
 					tokenHoldersTaxes, _ := GetTokenHoldersAndTaxes(tokenConfig.Pair)
 

@@ -50,7 +50,7 @@ type Pair struct {
 	PriceNative   *string       `json:"priceNative,omitempty"`
 	PriceUsd      *string       `json:"priceUsd,omitempty"`
 	Volume        *VolumeChange `json:"volume,omitempty"`
-	Fdv           *int64        `json:"fdv,omitempty"`
+	Fdv           *float64        `json:"fdv,omitempty"`
 	PairCreatedAt *int64        `json:"pairCreatedAt,omitempty"`
 }
 
