@@ -211,7 +211,12 @@ func ActionStartBot(chatID int64, bot *telego.Bot) error {
 					//msg := "ethAmount " + ToDecimal(ethAmount, 18).String() + "\n"
 					//msg += "tokenAmount " + ToDecimal(tokenAmount, 18).String() + "\n"
 
-					msg := BuildBubbleMessage("")
+					tokenInfo, _ := GetTokenInfoDex(tokenConfig.Address)
+					mc := fmt.Sprintf("%d", tokenInfo.Fdv)
+					volume24 := fmt.Sprintf("%f", *tokenInfo.Volume.H24)
+					tokenHoldersTaxes, _ := GetTokenHoldersAndTaxes(tokenConfig.Pair)
+
+					msg := BuildBubbleMessage(tokenConfig, userAddress.Hex(), tx.Hash().Hex(), ethAmount, tokenAmount, mc, volume24, *tokenHoldersTaxes.Holders, tokenHoldersTaxes.Buy, tokenHoldersTaxes.Sell)
 					msg = escapeMarkdown(msg)
 					fmt.Println(msg)
 

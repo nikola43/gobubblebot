@@ -29,21 +29,22 @@ func HandleInput(inputMode string, update telego.Update, bot *telego.Bot) error 
 			return nil
 		}
 
-		pair, _ := GetPairAddress(msgText)
-		fmt.Println("pair", pair)
+		pair, _ := GetTokenInfoDex(msgText)
+		//pair := "0x7ce52dc08b49e0bc11252cd267d2614dfc616d9f"
 
 		/*
 			tokenInfo, err := GetTokenInfo(msgText)
 			if err != nil {
 				return err
 			}
-
-			fmt.Println(tokenInfo)
 		*/
 
+		//fmt.Println(tokenInfo)
+		fmt.Println("pair", pair.PairAddress)
 		tokenConfig := state[chatID]["TokenConfig"].(TokenConfig)
 		tokenConfig.Address = msgText
-		tokenConfig.Pair = pair
+		tokenConfig.Pair = *pair.PairAddress
+		tokenConfig.Symbol = *pair.BaseToken.Symbol
 		state[chatID]["TokenConfig"] = tokenConfig
 
 	// --------------------- SetGroup ---------------------
@@ -67,6 +68,7 @@ func HandleInput(inputMode string, update telego.Update, bot *telego.Bot) error 
 				return nil
 			}
 		*/
+		fmt.Println(msgText)
 		tokenConfig := state[chatID]["TokenConfig"].(TokenConfig)
 		tokenConfig.Telegram = msgText
 		state[chatID]["TokenConfig"] = tokenConfig
@@ -102,6 +104,7 @@ func HandleInput(inputMode string, update telego.Update, bot *telego.Bot) error 
 	}
 
 	msg := BuildConfigMessage(state[chatID]["TokenConfig"])
+	fmt.Println(msg)
 	HandleActionWithKeyboard(chatID, ShowMenu, msg, bot)
 	return nil
 }
@@ -126,26 +129,32 @@ Chart ▫️ Buy
 Website ▫️ Twitter ▫️ Telegram
 */
 
-func BuildBubbleMessage(config interface{}) string {
-	address := "0xFf1DFaBA766E282Ab2BC0c7489A321b5C87A86ce"
-	ethValue := 1.0
-	ethValueString := fmt.Sprintf("%f", ethValue)
-	tokenAmount := 10.0
-	tokenAmountString := fmt.Sprintf("%f", tokenAmount)
-	tokenName := "Long"
+func BuildBubbleMessage(tokenConfig TokenConfig, userAddress, tx string, ethAmount, tokenAmount *big.Int, marketCap, volume24, holders, buyTax, sellTax string) string {
+	ethValue := ToDecimal(ethAmount, 18)
+	ethValueFloat, _ := ethValue.Float64()
+	tokenValue := ToDecimal(tokenAmount, 18).String()
 
 	emoji := "🟢"
-	emojiText := ""
+	emojiText := "🟢"
 	emojiValue := 0.01
-	emojiCount := ethValue / emojiValue
+	emojiCount := ethValueFloat / emojiValue
 	for i := 0; i < int(emojiCount); i++ {
 		emojiText += emoji
 	}
 
-	msg := "*" + tokenName + " Buy!" + "*" + "\n\n"
-	msg += "*" + ethValueString + " ETH" + "*" + "\n\n"
-	msg += "*" + tokenAmountString + " " + tokenName + "*" + "\n\n"
-	msg += "*[Address](https://etherscan.io/address/" + address + ")" + "*" + "\n\n"
+	msg := "*" + tokenConfig.Symbol + " Buy!" + "*\n\n"
+	msg += emojiText + "\n\n"
+	msg += "*" + ethValue.String() + " ETH" + "*\n\n"
+	msg += "*" + tokenValue + " " + tokenConfig.Symbol + "*\n\n"
+	msg += "*[Address](https://etherscan.io/address/" + userAddress + ") | [Tx](https://etherscan.io/tx/" + tx + ")" + "*\n\n"
+	msg += "\n"
+	msg += "🔘 *Market Cap $" + marketCap + "*\n\n"
+	msg += "🔘 *24h Volume $" + volume24 + "*\n\n"
+	msg += "🧸 *Holders " + holders + "*\n\n"
+	msg += "🔪 *Taxes B/S " + buyTax + "/" + sellTax + "*\n\n"
+	msg += "\n"
+	msg += "*[Chart](https://dexscreener.com/ethereum/" + tokenConfig.Address + ") | [Buy](https://app.uniswap.org/tokens/ethereum/" + tokenConfig.Address + ")" + "*\n\n"
+	msg += "*[Website](" + tokenConfig.Website + ") | [Twitter](" + tokenConfig.Twitter + ") | [Telegram](" + tokenConfig.Telegram + ")" + "*\n\n"
 
 	return msg
 }
@@ -285,12 +294,12 @@ func SendMessage(chatID int64, msg string, replyMarkup telego.ReplyMarkup, bot *
 		message = tu.Message(
 			tu.ID(chatID),
 			msg,
-		).WithReplyMarkup(replyMarkup).WithParseMode("MarkdownV2")
+		).WithReplyMarkup(replyMarkup).WithParseMode("MarkdownV2").WithDisableWebPagePreview()
 	} else {
 		message = tu.Message(
 			tu.ID(chatID),
 			msg,
-		).WithParseMode("MarkdownV2")
+		).WithParseMode("MarkdownV2").WithDisableWebPagePreview()
 	}
 	// Sending message
 	res, err := bot.SendMessage(message)
