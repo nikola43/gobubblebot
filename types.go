@@ -20,6 +20,7 @@ type TokenConfig struct {
 	Website  string
 	Telegram string
 	Twitter  string
+	groupId  int64
 }
 
 // --------------------------

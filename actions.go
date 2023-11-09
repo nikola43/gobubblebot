@@ -20,7 +20,9 @@ func HandleAction(chatID int64, action string, bot *telego.Bot) error {
 	if err != nil {
 		return err
 	}
-	state[chatID]["InputMode"] = action
+	if len(state) != 0 {
+		state[chatID]["InputMode"] = action
+	}
 	return nil
 }
 
@@ -74,8 +76,13 @@ func ActionStartBot(chatID int64, bot *telego.Bot) error {
 		SendMessage(chatID, "Bot already started", nil, bot, false)
 		return nil
 	}
-
+	fmt.Println("___________", state)
+	if len(state) == 0 {
+		SendMessage(chatID, "Please bot config infomation!", nil, bot, false)
+		return nil
+	}
 	tokenConfig := state[chatID]["TokenConfig"].(TokenConfig)
+	fmt.Println("___________", tokenConfig)
 
 	/*
 		if tokenConfig.Address == "" {
@@ -88,8 +95,11 @@ func ActionStartBot(chatID int64, bot *telego.Bot) error {
 			return nil
 		}
 	*/
-
-	fmt.Println(tokenConfig)
+	tokenAddress := tokenConfig.Address
+	if tokenAddress == "" {
+		SendMessage(chatID, "Set token address!", nil, bot, false)
+		return nil
+	}
 
 	done := make(chan bool)
 	goroutineId++
@@ -100,7 +110,7 @@ func ActionStartBot(chatID int64, bot *telego.Bot) error {
 
 	contractAbi, _ := abi.JSON(strings.NewReader(string(Pulsedoge.PulsedogeABI)))
 	logs := make(chan types.Log)
-	tokenAddress := tokenConfig.Address
+
 	pair := tokenConfig.Pair
 	sub, _ := BuildContractEventSubscription(bscWeb3, tokenAddress, logs)
 	fmt.Println(color.YellowString("  ----------------- Blockchain Events -----------------"))
@@ -221,9 +231,23 @@ func ActionStartBot(chatID int64, bot *telego.Bot) error {
 					msg = escapeMarkdown(msg)
 					fmt.Println(msg)
 
-					_, err := SendMessage(chatID, msg, nil, bot, true)
-					fmt.Println(err)
-					fmt.Println(err)
+					// _, err := SendMessage(chatID, msg, nil, bot, true)
+					// fmt.Println("________chatid", chatID)
+					// fmt.Println("________bot", bot)
+					// fmt.Println(err)
+					// fmt.Println(err)
+
+					keys := make([]int64, len(state))
+
+					i := 0
+					for k := range state {
+						keys[i] = k
+						i++
+
+						res, gErr := SendMessage(k, msg, nil, bot, true)
+						fmt.Println(res)
+						fmt.Println(gErr)
+					}
 
 					isBuy = false
 					ethAmount = big.NewInt(0)

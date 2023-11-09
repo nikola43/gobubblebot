@@ -84,6 +84,8 @@ func HandleInput(inputMode string, update telego.Update, bot *telego.Bot) error 
 			}
 		*/
 		tokenConfig := state[chatID]["TokenConfig"].(TokenConfig)
+		fmt.Println(tokenConfig)
+		fmt.Println(msgText)
 		tokenConfig.Group = msgText
 		state[chatID]["TokenConfig"] = tokenConfig
 	// --------------------- SetTelegram ---------------------
@@ -200,12 +202,12 @@ func BuildConfigMessage(config interface{}) string {
 }
 
 func HandleButtonCallback(callback *telego.CallbackQuery, bot *telego.Bot) error {
+	// get chat id
+	chatID := callback.Message.Chat.ID
+
 	fmt.Println("Received callback with data:", callback.Data)
 	fmt.Println("Received callback with message:", callback.Message.Text)
 	fmt.Println("Received callback with chat id:", callback.Message.Chat.ID)
-
-	// get chat id
-	chatID := callback.Message.Chat.ID
 
 	/*
 		if state[chatID]["BotMessageID"] != nil {
@@ -272,13 +274,14 @@ func HandleMessage(update telego.Update, bot *telego.Bot) error {
 
 	chatID := update.Message.Chat.ID
 	msgText := update.Message.Text
-
+	fmt.Println("chatid", chatID)
 	if state[chatID] == nil {
 		state[chatID] = make(map[string]interface{})
 		state[chatID]["BotMessageID"] = 0
 		state[chatID]["InputMode"] = ""
 		state[chatID]["Account"] = nil
 	}
+	fmt.Println(state)
 	fmt.Println(state[chatID])
 
 	botMessageID := state[chatID]["BotMessageID"].(int)
@@ -326,13 +329,22 @@ func HandleMessage(update telego.Update, bot *telego.Bot) error {
 			var data UserConfig
 			file, _ := os.ReadFile("data/" + userID + ".json")
 			_ = json.Unmarshal([]byte(file), &data)
-			fmt.Println(data)
+			fmt.Println("_____________", data)
 			state[chatID]["TokenConfig"] = data.Token
 
 			msg := BuildConfigMessage(state[chatID]["TokenConfig"])
 			HandleActionWithKeyboard(chatID, ShowMenu, msg, bot)
 		}
 
+	case "/ping":
+		if state[chatID]["TokenConfig"] == nil {
+			tokenConfig := TokenConfig{
+				groupId: chatID,
+			}
+			state[chatID]["TokenConfig"] = tokenConfig
+		}
+
+		fmt.Println("___________", state)
 	}
 
 	if inputMode != "" {
@@ -378,8 +390,10 @@ func SendMessage(chatID int64, msg string, replyMarkup telego.ReplyMarkup, bot *
 	if err != nil {
 		return nil, err
 	}
-
-	state[chatID]["BotMessageID"] = res.MessageID
+	fmt.Println("----------", state)
+	if state[chatID] == nil {
+		state[chatID]["BotMessageID"] = res.MessageID
+	}
 	return res, nil
 }
 
